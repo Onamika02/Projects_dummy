@@ -1,0 +1,71 @@
+{
+	"info": {
+		"_postman_id": "5e05d23b-c57f-4bab-be8e-55faa157ec94",
+		"name": "load-test",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "1453931",
+		"_collection_link": "https://red-firefly-245852.postman.co/workspace/devops~3d15da68-1a3f-446f-80ef-6478a82f157b/collection/1453931-5e05d23b-c57f-4bab-be8e-55faa157ec94?action=share&source=collection_link&creator=1453931"
+	},
+	"item": [
+		{
+			"name": "step1",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://test.k6.io",
+					"protocol": "https",
+					"host": [
+						"test",
+						"k6",
+						"io"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "step2",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://test.k6.io",
+					"protocol": "https",
+					"host": [
+						"test",
+						"k6",
+						"io"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

@@ -1,0 +1,47 @@
+services:
+  prometheus:
+    image: prom/prometheus:v2.45.0
+    command:
+      - --web.enable-remote-write-receiver
+      - --enable-feature=native-histograms
+      - --config.file=/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks:
+     - p-pay-test-network
+
+  grafana:
+    image: grafana/grafana
+    volumes:
+      - ./grafana/provisioning/:/etc/grafana/provisioning/
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=grafana_user     
+      - GF_SECURITY_ADMIN_PASSWORD=grafana_pass  
+    env_file:
+      - './grafana/grafana.env'
+    networks:
+     - p-pay-test-network
+    depends_on:
+      - prometheus
+  
+  k6:
+    build: ./k6-script
+    container_name: test-k6
+    ports:
+      - "6565:6565"
+    volumes:
+      - ./k6-script:/home/k6
+    environment:
+      - K6_PROMETHEUS_RW_SERVER_URL=http://prometheus:9090/api/v1/write
+      - K6_PROMETHEUS_RW_TREND_AS_NATIVE_HISTOGRAM=true
+      - K6_OUT=xk6-prometheus-rw
+    command: tail -f /dev/null
+    networks:
+      - p-pay-test-network  
+
+networks:
+  p-pay-test-network:
+    name: ${EXTERNAL_NETWORK:-p-pay-test-network}
+    external: true

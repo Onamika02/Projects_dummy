@@ -1,0 +1,273 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated/accounting"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = "postgresql://p_pay_user:p_pay_pass@p-pay-prostgres-db-test:5432/p_pay_accounting"
+}
+
+enum transactionType {
+  SYSTEM
+  MEMBER
+}
+
+enum headType {
+  ASSET
+  LIABILITY
+  INCOME
+  EXPENSE
+}
+
+enum type {
+  DEBIT
+  CREDIT
+}
+
+enum Status {
+  OPEN
+  LIMITED_ACTIVE
+  FULL_ACTIVE
+  ON_HOLD
+  BLACKLISTED
+  CLOSED
+}
+
+enum TransactionStatus {
+  SUCCESSFUL
+  FAILED
+  PENDING
+}
+
+enum ChangeType {
+  UPDATE
+  DELETE
+  CHANGE_STATUS
+  CREATE
+}
+
+enum ChargeType {
+  FIXED
+  PERCENTAGE
+  NO_CHARGE
+}
+
+enum FeeType {
+  COMMISSION
+  FEE
+  VAT
+  AIT
+  CASH_BACK
+}
+
+enum destinationType {
+  SOURCE
+  DESTINATION
+}
+
+model TransactionLeg {
+  id                       BigInt               @id @default(autoincrement())
+  chargeType               ChargeType           
+  description              String?
+  destinationType          destinationType?
+  fixedAmount              BigInt?
+  isEnable                 Boolean
+  maxAmount                BigInt?
+  minAmount                BigInt?
+  name                     String?
+  percentageAmount         Float?               
+  type                     FeeType?
+  generatedTransactionTypeId BigInt
+  originalTransactionTypeId  BigInt
+  generatedTransactionType TransactionType?      @relation("GeneratedTransactionType", fields: [generatedTransactionTypeId], references: [id])
+  originalTransactionType  TransactionType ?     @relation("OriginalTransactionType", fields: [originalTransactionTypeId], references: [id])
+  transactionLegLog        transactionLegLog[]  
+
+  @@map("transaction_leg")
+}
+
+model transactionLegLog {
+  id                BigInt            @id @default(autoincrement())
+  changeType        ChangeType?
+  oldValue          String?           @db.Text
+  newValue          String?           @db.Text
+  createdAt         DateTime?         @default(now())
+  createdByAdmin    BigInt?
+  TransactionLeg_id BigInt            
+  transactionLeg    TransactionLeg    @relation(fields: [TransactionLeg_id], references: [id])
+  TransactionType   TransactionType[]
+
+  @@map("transaction_leg_log")
+}
+
+model Transaction {
+  id                Int               @id @default(autoincrement())
+  transactionTypeId BigInt
+  fromAccountId     Int
+  toAccountId       Int
+  mainTransactionId Int?
+  amount            Int
+  isRefunded        Boolean?
+  referenceNo       String
+  description       String?
+  note              String?
+  status            TransactionStatus @default(SUCCESSFUL)
+  log               String?
+  transactionType   TransactionType   @relation(fields: [transactionTypeId], references: [id])
+  fromUserAccount   UserAccount[]     @relation("FromAccount")
+  toUserAccount     UserAccount[]     @relation("ToAccount")
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @default(now()) @updatedAt
+
+  @@map("transactions")
+}
+
+model TransactionType {
+  id                       BigInt                     @id @default(autoincrement())
+  transactionCode          String                     @unique
+  name                     String
+  description              String?
+  dailyLimitAmount         BigInt?
+  dailyLimitCount          BigInt?
+  weeklyLimitAmount        BigInt?
+  weeklyLimitCount         BigInt?
+  monthlyLimitAmount       BigInt?
+  monthlyLimitCount        BigInt?
+  minAmount                Int?
+  maxAmount                Int?
+  createdByAdminId         Int
+  createdByAdminIdentifier String
+  updatedByAdminId         Int?
+  updatedByAdminIdentifier String?
+  isActive                 Boolean                    @default(true)
+  createdAt                DateTime                   @default(now())
+  updatedAt                DateTime                   @default(now()) @updatedAt
+  fromChartOfAccountId     Int?                       @map("fromChartOfAccount")
+  toChartOfAccountId       Int?                       @map("toChartOfAccount")
+  transactions             Transaction[]
+  fromChartOfAccount       ChartOfAccount?            @relation("FromChartOfAccount", fields: [fromChartOfAccountId], references: [id], onDelete: Cascade)
+  toChartOfAccount         ChartOfAccount?            @relation("ToChartOfAccount", fields: [toChartOfAccountId], references: [id], onDelete: Cascade)
+  generatedTransactionFees TransactionLeg[]           @relation("GeneratedTransactionType")
+  originalTransactionFees  TransactionLeg[]           @relation("OriginalTransactionType")
+  TransactionTypeChangeLog TransactionTypeChangeLog[]
+  transactionLegLog        transactionLegLog[]
+
+  @@map("transaction_type")
+}
+
+model TransactionTypeChangeLog {
+  id                       BigInt          @id @default(autoincrement())
+  changeType               ChangeType?
+  createdAt                DateTime?       @default(now())
+  createdByAdminId         Int?
+  createdByAdminIdentifier String?
+  oldValue                 String?         @db.Text
+  newValue                 String?         @db.Text
+  transactionType_id       BigInt
+  transactionType          TransactionType @relation(fields: [transactionType_id], references: [id])
+
+  @@map("transaction_type_change_log")
+}
+
+model ChartOfAccount {
+  id                 Int               @id @default(autoincrement())
+  adminId            Int
+  code               String            @unique
+  createdAt          DateTime          @default(now())
+  dailyLimitAmount   Float?
+  dailyLimitCount    Int?
+  description        String?
+  headType           headType
+  maxWalletAmount    Float?
+  minWalletAmount    Float?
+  monthlyLimitAmount Float?
+  monthlyLimitCount  Int?
+  weeklyLimitAmount  Float?
+  weeklyLimitCount   Int?
+  name               String
+  onlyParent         Boolean?
+  transactionType    transactionType
+  updatedAt          DateTime          @updatedAt
+  userAccounts       UserAccount[]     @relation("UserAccountChartOfAccount")
+  fromTransactions   TransactionType[] @relation("FromChartOfAccount")
+  toTransactions     TransactionType[] @relation("ToChartOfAccount")
+
+  @@map("chart_of_accounts")
+}
+
+model UserAccount {
+  id                 Int            @id @default(autoincrement())
+  accountName        String
+  createdAt          DateTime       @default(now())
+  dailyLimitAmount   Int?
+  dailyLimitCount    Int?
+  identifier         String         @unique
+  maxWalletAmount    Int?
+  minWalletAmount    Int?
+  monthlyLimitAmount Int?
+  monthlyLimitCount  Int?
+  weeklyLimitAmount  Int?
+  weeklyLimitCount   Int?
+  status             Status         @default(FULL_ACTIVE)
+  updatedAt          DateTime       @updatedAt
+  chartOfAccount_id  Int
+  aitPercentage      Decimal?       @default(2.5) @db.Decimal(10, 2)
+  chartOfAccount     ChartOfAccount @relation("UserAccountChartOfAccount", fields: [chartOfAccount_id], references: [id], onDelete: Cascade)
+  fromTransactions   Transaction[]  @relation("FromAccount")
+  toTransactions     Transaction[]  @relation("ToAccount")
+
+  accountLogs AccountLog[] @relation("UserAccountToAccountLog")
+
+  @@map("accounts")
+}
+
+model AccountLog {
+  id                 BigInt    @id @default(autoincrement())
+  accountId          Int?      @map("accountId")
+  accountName        String?
+  identifier         String?
+  createdBy          BigInt?
+  dailyLimitCount    BigInt?
+  dailyLimitAmount   BigInt?
+  monthlyLimitCount  BigInt?
+  monthlyLimitAmount BigInt?
+  weeklyLimitCount   BigInt?
+  weeklyLimitAmount  BigInt?
+  minWalletAmount    BigInt?
+  maxWalletAmount    BigInt?
+  status             Status?
+  type               String?
+  chartOfAccount_id  Int?      @map("chartOfAccount")
+  createdAt          DateTime? @default(now())
+  updatedAt          DateTime? @updatedAt
+
+  userAccount UserAccount? @relation("UserAccountToAccountLog", fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@map("account_logs")
+}
+
+model ChartOfAccountLog {
+  id                       Int        @id @default(autoincrement())
+  changeType               ChangeType
+  oldValue                 String?    @db.Text
+  newValue                 String?    @db.Text
+  createdAt                DateTime   @default(now())
+  createdByAdminId         Int
+  createdByAdminIdentifier String
+
+  @@map("chart_of_account_logs")
+}
+
+model Ledger {
+  id            Int      @id @default(autoincrement())
+  accountId     Int
+  transactionId Int
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  amount        Int
+  description   String?
+  type          type
+
+  @@map("ledger")
+}

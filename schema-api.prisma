@@ -1,0 +1,500 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated/api"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = "postgresql://p_pay_user:p_pay_pass@p-pay-prostgres-db-test:5432/p_pay_api"
+}
+
+enum OperatorAliasEnum {
+  RA
+  RB
+  RG
+  RR
+  SG
+  RT
+}
+
+enum OperatorEnum {
+  AIRTEL
+  BANGLALINK
+  GRAMEENPHONE
+  ROBI
+  SKITTO
+  TELETALK
+}
+
+enum OperatorType {
+  PREPAID
+  POSTPAID
+}
+
+enum TransactionStatusEnum {
+  PENDING
+  SUCCESS
+  REJECTED
+  FAILED
+  TODO
+}
+
+enum Status {
+  PENDING
+  APPROVED
+  DENIED
+  FAILED
+}
+
+enum billerType {
+  GAS
+  ELECTRICITY
+  E_SERVICE
+  INTERNET
+  WATER
+}
+
+enum billerStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum settlementFrequency {
+
+  ONREQUEST
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+}
+
+enum CreatedBy {
+  SYSTEM
+  ADMIN
+  MERCHANT
+}
+
+enum SettlementStatus {
+  INITIATED
+  REQUESTED
+  APPROVED
+  PENDING
+  SUCCESSFUL
+  DISBURSED
+  REJECTED
+  CANCELLED
+}
+
+model Operator {
+  id                Int                @id @default(autoincrement())
+  type              OperatorEnum?
+  alias             OperatorAliasEnum?
+  description       String?
+  logo              String?
+  accountIdentifier String?
+
+  topUps TopUp[] @relation("OperatorToTopUp")
+
+  @@map("operator")
+}
+
+model UtilityBillingInfo {
+  id              Int                   @id @default(autoincrement())
+  userId          Int
+  billerCode      String?               @db.VarChar(255)
+  refId           String?               @db.VarChar(255)
+  referenceNumber String?               @db.VarChar(255)
+  transactionId   String?               @db.VarChar(255)
+  amount          Int
+  chargeFee       Int
+  total           Int
+  note            String?
+  status          TransactionStatusEnum @default(TODO)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  @@map("utility_biller_info")
+}
+
+model UtilitySave {
+  id                  BigInt   @id @default(autoincrement())
+  refId               String?  @db.VarChar(255)
+  amount              BigInt?
+  chargeFee           Int?
+  note                String?
+  transactionTypeCode String?  @db.VarChar(255)
+  transactionTypeId   BigInt?
+  toAccount           String?  @db.VarChar(255)
+  fromAccount         String?  @db.VarChar(255)
+  save                Boolean  @default(false)
+  billerId            Int?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@map("utility_save")
+}
+
+model Payment {
+  id                  BigInt                @id @default(autoincrement())
+  agentMobile         String?
+  transactionTypeCode String?
+  transactionTypeId   BigInt?
+  note                String?
+  amount              BigInt?
+  userId              Int
+  referenceNumber     String?               @unique
+  status              TransactionStatusEnum @default(TODO)
+  toAccount           String?
+  fromAccount         String?
+  save                Boolean               @default(false)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  paymentSave         PaymentSave?          @relation
+
+  @@map("payment")
+}
+
+model PaymentSave {
+  id                  BigInt  @id @default(autoincrement())
+  agentMobile         String?
+  transactionTypeCode String?
+  transactionTypeId   BigInt?
+  note                String?
+  amount              BigInt?
+  referenceNo         String?
+  toAccount           String?
+  fromAccount         String?
+  save                Boolean @default(false)
+  paymentId           BigInt  @unique @map("paymentId")
+
+  payment Payment @relation(fields: [paymentId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("payment_save")
+}
+
+model TopUp {
+  id              Int                   @id @default(autoincrement())
+  referenceNumber String?                @unique @db.VarChar(255)
+  operatorId      Int                   @map("operator_id")
+  operator        Operator              @relation("OperatorToTopUp", fields: [operatorId], references: [id])
+  rechargeType    RechargeType          @default(PREPAID)
+  userId          Int
+  name            String?
+  fromAccount     String?
+  toAccount       String?
+  amount          BigInt
+  chargeFee       BigInt?
+  totalAmount     BigInt?
+  status          TransactionStatusEnum @default(PENDING)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  topUpSaves      TopUpSave[]           @relation("TopUpToTopUpSave")
+
+  @@map("top_up")
+}
+
+enum RechargeType {
+  PREPAID
+  POSTPAID
+  SKITTO
+}
+
+model TopUpSave {
+  id                  BigInt   @id @default(autoincrement())
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  transactionTypeCode String?
+  transactionTypeId   BigInt?
+  phone               String?
+  amount              BigInt?
+  note                String?
+  operatorId          Int?
+  toAccount           String?
+  fromAccount         String?
+  operatorType        String?
+  save                Boolean  @default(false)
+  topUpId             Int?
+  topUp               TopUp?   @relation("TopUpToTopUpSave", fields: [topUpId], references: [id])
+
+  @@map("top_up_save")
+}
+
+model RequestMoney {
+  id                    Int      @id @default(autoincrement())
+  createdAt             DateTime @default(now()) @db.Timestamp(6)
+  updatedAt             DateTime @updatedAt
+  requesterId           Int
+  requestSenderNumber   String?  @db.VarChar(255)
+  requestedAmount       BigInt
+  requestReceiverNumber String   @db.VarChar(255)
+  status                Status?
+  splitBillId           String?
+
+  @@map("request_money")
+}
+
+model MerchantUser {
+  id               BigInt  @id @default(autoincrement())
+  userId           BigInt?
+  amount           BigInt?
+  tradeLicense     String? @db.Text
+  tinNumber        String?
+  organizationType String?
+  organizationId   String?
+
+  merchantPan    String?
+  merchantDomain String?
+
+  bankAccountNo   String?
+  bankAccountName String?
+
+  bankBranchName String?
+  bankName       String?
+  billNumber     String?
+  email          String?
+  mcc            String?
+
+  merchantCity String?
+  merchantName String?
+  mid          String?
+
+  organizationAddress String?
+  organizationName    String?
+  settlementFrequency settlementFrequency @default(ONREQUEST)
+
+  panMastercard String?
+  panUnionPay   String?
+  panVisa       String?
+
+  tid String?
+
+  createdAt DateTime? @default(now()) @map("createdAt")
+  updatedAt DateTime? @updatedAt @map("updatedAt")
+
+  @@map("merchant_users")
+}
+
+model SplitBill {
+  id                    BigInt                 @id @default(autoincrement())
+  createdAt             DateTime               @default(now()) @db.Timestamp(6)
+  updatedAt             DateTime               @updatedAt @db.Timestamp(6)
+  requesterId           Int
+  requestSenderNumber   String?
+  requestedAmount       BigInt
+  status                RequestMoneyStatusEnum @default(PENDING)
+  requestReceiverNumber String
+  referenceNumber       String?
+  isParent              Boolean?
+  groupId               String
+
+  @@map("split_bill")
+}
+
+enum RequestMoneyStatusEnum {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+model AdminSetting {
+  id        Int      @id @default(autoincrement())
+  info      String?  @db.Text
+  userType  UserType
+  createdBy Int?
+  createdAt DateTime @default(now()) @db.Timestamp(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamp(6)
+
+  @@map("admin_setting")
+}
+
+enum UserType {
+  MERCHANT
+  CUSTOMER
+}
+
+model FundTransferLogs {
+  id              BigInt       @id @default(autoincrement())
+  type            AddMoneyType
+  name            String?
+  identifier      String?
+  accountNumber   String?
+  cardNumber      String?
+  accountName     String?
+  accountType     String?
+  bankName        String?
+  branchName      String?
+  districtName    String?
+  cardType        String?
+  transactionCode String?
+  amount          BigInt?
+  distributorId   BigInt?
+  phoneNumber     String?
+  mfsType         String?
+  userId          Int
+
+  status          TransactionStatusEnum
+  referenceNumber String?               @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("fund_transfer_logs")
+}
+
+model FundTransferSave {
+  id                BigInt       @id @default(autoincrement())
+  type              AddMoneyType
+  accountNumber     String?
+  cardNumber        String?
+  accountName       String?
+  accountType       String?
+  bankName          String?
+  branchName        String?
+  districtName      String?
+  cardType          String?
+  transactionTypeId BigInt?
+  amount            BigInt?
+  distributorId     BigInt?
+  phoneNumber       String?
+  mfsType           String?
+  toAccount         String?
+  fromAccount       String?
+  userId            BigInt?
+  isSave            Boolean      @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("fund_transfer_save")
+}
+
+enum AddMoneyType {
+  BANK
+  CARD
+  MFS
+}
+
+model AddMoneyLogs {
+  id              BigInt       @id @default(autoincrement())
+  type            AddMoneyType
+  name            String?
+  identifier      String?
+  accountNumber   String?
+  cardNumber      String?
+  accountName     String?
+  accountType     String?
+  bankName        String?
+  branchName      String?
+  districtName    String?
+  cardType        String?
+  transactionCode String?
+  amount          BigInt?
+  distributorId   BigInt?
+  phoneNumber     String?
+  mfsType         String?
+  userId          Int
+
+  status          TransactionStatusEnum
+  referenceNumber String?               @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("add_money_logs")
+}
+
+model AddMoneySave {
+  id                BigInt        @id @default(autoincrement())
+  accountName       String?
+  accountNumber     String?
+  accountType       String?
+  amount            BigInt?
+  bankName          String?
+  branchName        String?
+  districtName      String?
+  cardNumber        String?
+  cardType          String?
+  distributorId     BigInt?
+  fromAccount       String?
+  isSave            Boolean       @default(false)
+  mfsType           String?
+  phoneNumber       String?
+  toAccount         String?
+  transactionTypeId BigInt?
+  type              AddMoneyType?
+  userId            BigInt?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("add_money_save")
+}
+
+model SendMoneySave {
+  id                  Int     @id @default(autoincrement())
+  userId              Int?
+  receiverPhone       String?
+  amount              BigInt?
+  cardId              Int?
+  requestId           Int?
+  transactionTypeCode String?
+  transactionTypeId   BigInt?
+  note                String?
+  requestType         String?
+  toAccount           String?
+  fromAccount         String?
+  save                Boolean
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("send_money_save")
+}
+
+model billerCategories {
+  id                 Int          @id @default(autoincrement())
+  accountIdentifier  String?
+  billerType         billerType
+  categoryIdentifier Int?
+  categoryName       String?
+  logo               String?
+  status             billerStatus
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  @@map("biller_categories")
+}
+
+model BulkDisbursement {
+  id              BigInt                @id @default(autoincrement())
+  fromAccount     String
+  toAccount       String
+  amount          BigInt
+  status          TransactionStatusEnum @default(TODO)
+  failedReason    String?
+  referenceNumber String?               @unique
+  merchantId      BigInt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("bulk_disbursements")
+}
+
+model SettlementRequest {
+  id                  BigInt           @id @default(autoincrement())
+  merchantIdentifier  String?
+  merchantId          String?
+  amount              BigInt            @db.BigInt
+  chargeFee           BigInt?           @db.BigInt
+  createdBy           CreatedBy?
+  approvedBy          BigInt?           @db.BigInt
+  status              SettlementStatus?  @default(PENDING)
+  createdAt           DateTime?          @default(now())
+  updatedAt           DateTime?          @updatedAt
+
+  @@map("settlement_request")
+}
+

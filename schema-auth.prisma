@@ -1,0 +1,75 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated/auth"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = "postgresql://p_pay_user:p_pay_pass@p-pay-prostgres-db-test:5432/p_pay_auth"
+}
+
+enum role {
+  MERCHANT
+  USER
+}
+
+enum AdminRoles {
+  ADMIN @map("0")
+  FIN   @map("1")
+  CRM   @map("2")
+}
+
+model adminUser {
+  id             Int      @id @default(autoincrement())
+  name           String
+  email          String   @unique
+  password       String
+  role           Int?
+  isactive       Boolean  @default(false)
+  createdat      DateTime @default(now())
+  updatedat      DateTime @updatedAt
+  profilepicture String?
+
+  @@map("admin_users")
+}
+
+model appUser {
+  id              Int      @id @default(autoincrement())
+  fullname        String?
+  phone           String?  @unique
+  profilepicture  String?
+  email           String?  @unique
+  password        String?
+  fathername      String?
+  mothername      String?
+  nidnumber       String?
+  dob             String?
+  nidaddress      String?
+  presentaddress  String?
+  district        String?
+  hasliveliness   Boolean?
+  hasnidinfo      Boolean?
+  isemailverified Boolean?
+  isphoneverified Boolean?
+  nidback         String?
+  nidfront        String?
+  role            role
+  wrongpincount   Int
+  nominee  Nominee?
+
+  @@map("users")
+}
+model Nominee {
+  id          Int       @id @default(autoincrement())
+  name        String
+  nidnumber   String
+  birthdate   String
+  relation    String
+  phonenumber String
+  userid      Int    @unique
+  user        appUser   @relation(fields: [userid], references: [id])
+  createdat   DateTime @default(now())
+  updatedat   DateTime @updatedAt
+
+  @@map("nominees")
+}
